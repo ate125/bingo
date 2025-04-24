@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Automatic Bingo Card Generation</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    h1 { color: #007bff; }
+    table { margin: 20px auto; border-collapse: collapse; }
+    th, td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+    th { background-color: #007bff; color: white; }
+    button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+    .error { border: 2px solid red; }
+    #savedCardsContainer {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 300px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: left;
+    }
+    #savedCardsContainer h2 {
+      font-size: 16px;
+      margin-bottom: 5px;
+    }
+    .cardDisplay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      border: 1px solid #ddd;
+      padding: 20px;
+      z-index: 1000;
+      text-align: center;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+    .closeButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      cursor: pointer;
+      font-size: 20px;
+      color: #555;
+    }
+    .highlighted {
+      border: 2px solid red;
+    }
+    #savedCardsList li button {
+      visibility: hidden;
+    }
+    #savedCardsList li:hover button {
+      visibility: visible;
+    }
+  </style>
+</head>
+<body>
+  <h1>Automatic Bingo Card Generation</h1>
+  <p>Your automatically generated Bingo card:</p>
+  Card Number: <input type="text" id="cardNumber" placeholder="Enter Card Number"><br><br>
+  <table>
+    <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+    <tr>
+      <td data-col="B"></td>
+      <td data-col="I"></td>
+      <td data-col="N"></td>
+      <td data-col="G"></td>
+      <td data-col="O"></td>
+    </tr>
+    <tr>
+      <td data-col="B"></td>
+      <td data-col="I"></td>
+      <td data-col="N"></td>
+      <td data-col="G"></td>
+      <td data-col="O"></td>
+    </tr>
+    <tr>
+      <td data-col="B"></td>
+      <td data-col="I"></td>
+      <td>F</td>
+      <td data-col="G"></td>
+      <td data-col="O"></td>
+    </tr>
+    <tr>
+      <td data-col="B"></td>
+      <td data-col="I"></td>
+      <td data-col="N"></td>
+      <td data-col="G"></td>
+      <td data-col="O"></td>
+    </tr>
+    <tr>
+      <td data-col="B"></td>
+      <td data-col="I"></td>
+      <td data-col="N"></td>
+      <td data-col="G"></td>
+      <td data-col="O"></td>
+    </tr>
+  </table>
+  <button id="generateBtn">Generate Card</button>
+  <button id="registerBtn">Register Card</button>
+  <button id="backBtn">Back</button>
+
+  <div id="savedCardsContainer">
+    <h2>Saved Cards</h2>
+    <ul id="savedCardsList"></ul>
+  </div>
+
+  <div id="cardDisplayContainer" class="cardDisplay" style="display: none;">
+    <h2>Card Details</h2>
+    <span class="closeButton" onclick="closeCardDetails()">X</span>
+    <table id="cardDetailsTable">
+      <tr><th>B</th><th>I</th><th>N</th><th>G</th><th>O</th></tr>
+      <tr>
+        <td data-index="0"></td>
+        <td data-index="1"></td>
+        <td data-index="2"></td>
+        <td data-index="3"></td>
+        <td data-index="4"></td>
+      </tr>
+      <tr>
+        <td data-index="5"></td>
+        <td data-index="6"></td>
+        <td data-index="7"></td>
+        <td data-index="8"></td>
+        <td data-index="9"></td>
+      </tr>
+      <tr>
+        <td data-index="10"></td>
+        <td data-index="11"></td>
+        <td>F</td>
+        <td data-index="12"></td>
+        <td data-index="13"></td>
+      </tr>
+      <tr>
+        <td data-index="14"></td>
+        <td data-index="15"></td>
+        <td data-index="16"></td>
+        <td data-index="17"></td>
+        <td data-index="18"></td>
+      </tr>
+      <tr>
+        <td data-index="19"></td>
+        <td data-index="20"></td>
+        <td data-index="21"></td>
+        <td data-index="22"></td>
+        <td data-index="23"></td>
+      </tr>
+    </table>
+  </div>
+
+  <div id="overlay" class="overlay" style="display: none;"></div>
+
+  <script>
+    // Function to retrieve saved cards from localStorage
+    function getSavedCards() {
+      const savedCards = localStorage.getItem('registeredCards');
+      return savedCards ? JSON.parse(savedCards) : [];
+    }
+
+    // Function to save cards to localStorage
+    function saveCard(card) {
+      const savedCards = getSavedCards();
+      savedCards.push(card);
+      localStorage.setItem('registeredCards', JSON.stringify(savedCards));
+      displaySavedCards(); // Update the display after saving
+    }
+
+    // Function to remove a card from localStorage
+    function removeCard(index) {
+      let savedCards = getSavedCards();
+      savedCards.splice(index, 1);
+      localStorage.setItem('registeredCards', JSON.stringify(savedCards));
+      displaySavedCards(); // Update the display after removing
+    }
+
+    // Function to display saved cards
+    function displaySavedCards() {
+      const savedCards = getSavedCards();
+      const savedCardsList = document.getElementById('savedCardsList');
+      savedCardsList.innerHTML = ''; // Clear existing list
+
+      savedCards.forEach((card, index) => {
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `
+          Card Number: ${card.cardNumber}
+          <button onclick="seeCard(${index})">See</button>
+          <button onclick="removeCard(${index})">Remove</button>
+        `;
+        savedCardsList.appendChild(listItem);
+      });
+    }
+
+    // Function to display card details in a table
+    function seeCard(index) {
+      const savedCards = getSavedCards();
+      const card = savedCards[index];
+      const cardDisplayContainer = document.getElementById('cardDisplayContainer');
+      const cardDetailsTable = document.getElementById('cardDetailsTable');
+      const overlay = document.getElementById('overlay');
+      const tds = cardDetailsTable.querySelectorAll('td[data-index]');
+
+      tds.forEach(td => {
+        const index = parseInt(td.dataset.index);
+        td.textContent = card.numbers[index];
+      });
+
+      cardDisplayContainer.style.display = 'block';
+      overlay.style.display = 'block';
+    }
+
+    // Function to close card details
+    function closeCardDetails() {
+      const cardDisplayContainer = document.getElementById('cardDisplayContainer');
+      const overlay = document.getElementById('overlay');
+
+      cardDisplayContainer.style.display = 'none';
+      overlay.style.display = 'none';
+    }
+
+    // Function to generate a random number within a range
+    function getRandomNumber(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Function to generate the Bingo card
+    function generateCard() {
+      const ranges = {
+        B: [1, 15],
+        I: [16, 30],
+        N: [31, 45],
+        G: [46, 60],
+        O: [61, 75]
+      };
+
+      const cardValues = {};
+      for (const col in ranges) {
+        cardValues[col] = [];
+      }
+
+      const tds = document.querySelectorAll('td[data-col]');
+      tds.forEach(td => {
+        const col = td.dataset.col;
+        let randomNumber;
+        do {
+          randomNumber = getRandomNumber(ranges[col][0], ranges[col][1]);
+        } while (cardValues[col].includes(randomNumber));
+        cardValues[col].push(randomNumber);
+        td.textContent = randomNumber;
+      });
+    }
+
+    // Generate the card on page load
+    generateCard();
+
+    document.getElementById('generateBtn').addEventListener('click', function() {
+      generateCard();
+    });
+
+    document.getElementById('registerBtn').addEventListener('click', function() {
+      const cardNumberInput = document.getElementById('cardNumber');
+      const cardNumber = cardNumberInput.value.trim();
+
+      if (cardNumber === '') {
+        alert('Please enter a card number.');
+        cardNumberInput.classList.add('highlighted');
+        return;
+      } else {
+        cardNumberInput.classList.remove('highlighted');
+      }
+
+      // Check if the card number already exists
+      const savedCards = getSavedCards();
+      const cardNumberExists = savedCards.some(card => card.cardNumber === cardNumber);
+
+      if (cardNumberExists) {
+        alert('Card number already exists. Please enter a different card number.');
+        cardNumberInput.classList.add('highlighted');
+        return;
+      } else {
+        cardNumberInput.classList.remove('highlighted');
+      }
+
+      const tds = document.querySelectorAll('td[data-col]');
+      const cardData = {};
+      cardData.cardNumber = cardNumber;
+      cardData.numbers = [];
+
+      tds.forEach(td => {
+        cardData.numbers.push(parseInt(td.textContent));
+      });
+
+      saveCard(cardData);
+      alert('Card registered successfully!');
+    });
+
+    // Back button functionality
+    document.getElementById('backBtn').addEventListener('click', function() {
+      window.close(); // Close the current window
+    });
+
+    // Initial display of saved cards
+    displaySavedCards();
+  </script>
+</body>
+</html>
